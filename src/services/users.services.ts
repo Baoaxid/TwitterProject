@@ -6,6 +6,7 @@ import { TokenType } from '~/constants/enums'
 import User from '~/models/schemas/User.schema'
 import RefreshToken from '~/models/Schemas/RefreshToken.schema'
 import { ObjectId } from 'mongodb'
+import { USERS_MESSAGES } from '~/constants/messages'
 
 class UsersService {
   //hàm nhận vào user_id và bỏ vào payload để tạo access_token
@@ -64,6 +65,11 @@ class UsersService {
     )
     //return access_token và refresh_token cho controller
     return { access_token, refresh_token }
+  }
+
+  async logout(refresh_token: string) {
+    await databaseService.refreshTokens.deleteOne({ token: refresh_token })
+    return { message: USERS_MESSAGES.LOGOUT_SUCCESS }
   }
 }
 

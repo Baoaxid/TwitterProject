@@ -1,12 +1,12 @@
 import { NextFunction, Request, Response } from 'express'
 import usersService from '~/services/users.services'
 import { ParamsDictionary } from 'express-serve-static-core'
-import { RegisterReqBody } from '~/models/requests/User.request'
+import { RegisterReqBody, loginReqBody, logoutReqBody } from '~/models/requests/User.request'
 import { ObjectId } from 'mongodb'
 import { USERS_MESSAGES } from '~/constants/messages'
 import User from '~/models/schemas/User.schema'
 
-export const loginController = async (req: Request, res: Response) => {
+export const loginController = async (req: Request<ParamsDictionary, any, loginReqBody>, res: Response) => {
   //vào req lấy user ra, và lấy _id của user đó
   const user = req.user as User
   const user_id = user._id as ObjectId
@@ -29,4 +29,11 @@ export const registerController = async (
     message: USERS_MESSAGES.REGISTER_SUCCESS,
     result
   })
+}
+
+export const logoutController = async (req: Request<ParamsDictionary, any, logoutReqBody>, res: Response) => {
+  const { refresh_token } = req.body
+  //logout sẽ nhận vào refresh_token để tìm và xoá
+  const result = await usersService.logout(refresh_token)
+  res.json(result)
 }
