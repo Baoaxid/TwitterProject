@@ -32,6 +32,7 @@ class UsersService {
     const user = await databaseService.users.findOne({ email: email })
     return Boolean(user)
   }
+
   async register(payload: RegisterReqBody) {
     const result = await databaseService.users.insertOne(
       new User({
