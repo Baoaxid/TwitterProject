@@ -5,7 +5,7 @@ import { defaultErrorHandler } from './middlewares/error.middlewares'
 
 const app = express()
 app.use(express.json())
-const port = 3000
+const port = 4000
 databaseService.connect()
 //route localhost:3000
 app.get('/', (req, res) => {

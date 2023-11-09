@@ -1,25 +1,32 @@
 import { Router } from 'express'
 import {
+  changePasswordController,
   emailVerifyController,
+  followController,
   forgotPasswordController,
   getMeController,
   getProfileController,
   loginController,
   logoutController,
+  refreshTokenController,
   registerController,
   resendEmailVerifyController,
   resetPasswordController,
+  unfollowController,
   updateMeController,
   verifyForgotPasswordTokenController
 } from '~/controllers/users.controllers'
 import { filterMiddleware } from '~/middlewares/common.middlewares'
 import loginValidator, {
   accessTokenValidator,
+  changePasswordValidator,
   emailVerifyTokenValidator,
+  followValidator,
   forgotPasswordValidator,
   refreshTokenValidator,
   registerValidator,
   resetPasswordValidator,
+  unfollowValidator,
   updateMeValidator,
   verifiedUserValidator,
   verifyForgotPasswordTokenValidator
@@ -28,7 +35,7 @@ import { UpdateMeReqBody } from '~/models/requests/User.request'
 import { wrapAsync } from '~/utils/handlers'
 const usersRoute = Router()
 
-usersRoute.get('/login', loginValidator, wrapAsync(loginController))
+usersRoute.post('/login', loginValidator, wrapAsync(loginController))
 
 /*
     Description: Regiester new user
@@ -143,4 +150,55 @@ method: get
 không cần header vì, chưa đăng nhập cũng có thể xem
 */
 usersRoute.get('/:username', wrapAsync(getProfileController))
+
+/*
+des: Follow someone
+path: '/follow'
+method: post
+headers: {Authorization: Bearer <access_token>}
+body: {followed_user_id: string}
+
+user 2017: 6545009c8beee105ec7335e4
+user 2016: 6542605d5bb6e296be69439c
+*/
+usersRoute.post('/follow', accessTokenValidator, verifiedUserValidator, followValidator, wrapAsync(followController))
+
+/*
+    des: unfollow someone
+    path: '/unfollow/:user_id'
+    method: delete
+    headers: {Authorization: Bearer <access_token>}
+  g}
+    */
+usersRoute.delete(
+  '/unfollow/:user_id',
+  accessTokenValidator,
+  verifiedUserValidator,
+  unfollowValidator,
+  wrapAsync(unfollowController)
+)
+
+//change password
+/*
+  des: change password
+  path: '/change-password'
+  method: put
+  headers: {Authorization: Bearer <access_token}
+  body: {old_password: string, new_password: string, confirm_new_password: string}
+*/
+usersRoute.put(
+  '/change-password',
+  accessTokenValidator,
+  verifiedUserValidator,
+  changePasswordValidator,
+  wrapAsync(changePasswordController)
+)
+
+/*
+  des: refresh_token
+  path: '/refresh-token'
+  method: post
+  body: {refresh_token: string}
+*/
+usersRoute.post('/refresh-token', refreshTokenValidator, wrapAsync(refreshTokenController))
 export default usersRoute

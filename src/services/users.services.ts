@@ -1,5 +1,5 @@
 import databaseService from './database.services'
-import { RegisterReqBody, UpdateMeReqBody } from '~/models/requests/User.request'
+import { RegisterReqBody, TokenPayload, UpdateMeReqBody } from '~/models/requests/User.request'
 import { hashPassword } from '~/utils/crypto'
 import { signToken } from '~/utils/jwt'
 import { TokenType, UserVerifyStatus } from '~/constants/enums'
@@ -9,6 +9,7 @@ import { ObjectId } from 'mongodb'
 import { USERS_MESSAGES } from '~/constants/messages'
 import { ErrorWithStatus } from '~/models/Errors'
 import HTTP_STATUS from '~/constants/httpStatus'
+import { Follower } from '~/models/Schemas/Followers.schema'
 
 class UsersService {
   //hàm nhận vào user_id và bỏ vào payload để tạo access_token
@@ -264,6 +265,94 @@ class UsersService {
       })
     }
     return user
+  }
+
+  async follow(user_id: string, followed_user_id: string) {
+    //kiểm tra xem đã follow hay chưa
+    const isFollowed = await databaseService.followers.findOne({
+      user_id: new ObjectId(user_id),
+      followed_user_id: new ObjectId(followed_user_id)
+    })
+    //nếu đã follow thì return message là đã follow
+    if (isFollowed != null) {
+      return {
+        message: USERS_MESSAGES.FOLLOWED
+      }
+    }
+    //chưa thì thêm 1 document vào collection followers
+    await databaseService.followers.insertOne(
+      new Follower({
+        user_id: new ObjectId(user_id),
+        followed_user_id: new ObjectId(followed_user_id)
+      })
+    )
+    return {
+      message: USERS_MESSAGES.FOLLOW_SUCCESS
+    }
+  }
+
+  async unfollow(user_id: string, followed_user_id: string) {
+    //kiểm tra xem mình đã follow hay chưa
+    const isFollowed = await databaseService.followers.findOne({
+      user_id: new ObjectId(user_id),
+      followed_user_id: new ObjectId(followed_user_id)
+    })
+
+    if (!isFollowed) {
+      return {
+        message: USERS_MESSAGES.ALREADY_UNFOLLOWED
+      }
+    }
+
+    await databaseService.followers.deleteOne({
+      user_id: new ObjectId(user_id),
+      followed_user_id: new ObjectId(followed_user_id)
+    })
+
+    return {
+      message: USERS_MESSAGES.UNFOLLOW_SUCCESS
+    }
+  }
+
+  async changePassword(user_id: string, password: string) {
+    await databaseService.users.updateOne(
+      {
+        _id: new ObjectId(user_id)
+      },
+      [
+        {
+          $set: {
+            password: hashPassword(password),
+            forgot_password_token: '',
+            updated_at: '$$NOW'
+          }
+        }
+      ]
+    )
+    return {
+      message: USERS_MESSAGES.CHANGE_PASSWORD_SUCCESS
+    }
+  }
+
+  async refreshToken({
+    user_id,
+    verify,
+    refresh_token
+  }: {
+    user_id: string
+    verify: UserVerifyStatus
+    refresh_token: string
+  }) {
+    //tạo ra access_token mới và refresh_token mới
+    const [access_token, new_refresh_token] = await this.signAccessAndRefreshToken({ user_id, verify })
+    await databaseService.refreshTokens.deleteOne({ token: refresh_token })
+    await databaseService.refreshTokens.insertOne(
+      new RefreshToken({ user_id: new ObjectId(user_id), token: new_refresh_token })
+    )
+    return {
+      access_token,
+      refresh_token: new_refresh_token
+    }
   }
 }
 
