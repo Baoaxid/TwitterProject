@@ -242,7 +242,7 @@ class UsersService {
         }
       }
     )
-    return user.value //đây là document sau khi update
+    return user //đây là document sau khi update
   }
 
   async getProfile(username: string) {

@@ -184,7 +184,7 @@ usersRoute.delete(
   des: change password
   path: '/change-password'
   method: put
-  headers: {Authorization: Bearer <access_token}
+  headers: {Authorization: Bearer <access_token>}
   body: {old_password: string, new_password: string, confirm_new_password: string}
 */
 usersRoute.put(
