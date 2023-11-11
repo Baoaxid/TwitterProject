@@ -2,16 +2,16 @@ import formidable, { File } from 'formidable'
 import fs from 'fs' //thư viện giúp handle các đường dẫn
 import path from 'path'
 import { Request } from 'express'
-import { UPLOAD_TEMP_DIR } from '~/constants/dir'
+import { UPLOAD_IMAGE_TEMP_DIR, UPLOAD_VIDEO_DIR, UPLOAD_VIDEO_TEMP_DIR } from '~/constants/dir'
 export const initFolder = () => {
-  //nếu không có đường dẫn 'TwitterProject/uploads' thì tạo ra
-  const uploadsFolderPath = path.resolve('uploads')
-  if (!fs.existsSync(UPLOAD_TEMP_DIR)) {
-    fs.mkdirSync(UPLOAD_TEMP_DIR, {
-      recursive: true //cho phép tạo folder nested vào nhau
-      //uploads/image/bla bla bla
-    }) //mkdirSync: giúp tạo thư mục
-  }
+  ;[UPLOAD_IMAGE_TEMP_DIR, UPLOAD_VIDEO_TEMP_DIR].forEach((dir) => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, {
+        recursive: true //cho phép tạo folder nested vào nhau
+        //uploads/image/bla bla bla
+      }) //mkdirSync: giúp tạo thư mục
+    }
+  })
 }
 
 export const getNameFromFullname = (filename: string) => {
@@ -20,10 +20,16 @@ export const getNameFromFullname = (filename: string) => {
   return nameArr.join('') //nối lại thành chuỗi
 }
 
+//filename: ahihihi.mp4 => ['ahihihi','mp4']
+export const getExtension = (filename: string) => {
+  const nameArr = filename.split('.')
+  return nameArr[nameArr.length - 1]
+}
+
 //hàm xử lý file đã gửi lên
 export const handleUploadImage = async (req: Request) => {
   const form = formidable({
-    uploadDir: path.resolve(UPLOAD_TEMP_DIR), //lưu ở đâu
+    uploadDir: path.resolve(UPLOAD_IMAGE_TEMP_DIR), //lưu ở đâu
     maxFiles: 4, //tối đa bao nhiêu
     keepExtensions: true, //có lấy đuôi mở rộng không .png, .jpg
     maxFileSize: 300 * 1024 * 4, //tối đa bao nhiêu byte, 300kb
@@ -56,6 +62,41 @@ export const handleUploadImage = async (req: Request) => {
         return reject(new Error('Image is empty'))
       }
       return resolve(files.image as File[])
+    })
+  })
+}
+
+export const handleUploadVideo = async (req: Request) => {
+  const form = formidable({
+    uploadDir: path.resolve(UPLOAD_VIDEO_DIR),
+    maxFiles: 1,
+    maxFileSize: 50 * 1024 * 1024,
+    filter: function ({ name, originalFilename, mimetype }) {
+      console.log(name, originalFilename, mimetype)
+      const valid = name === 'video' && Boolean(mimetype?.includes('video/'))
+      if (!valid) {
+        form.emit('error' as any, new Error('File type is not valid') as any)
+      }
+      return valid
+    }
+  })
+
+  return new Promise<File[]>((resolve, reject) => {
+    form.parse(req, (err, fields, files) => {
+      if (err) return reject(err)
+      if (!files.video) {
+        return reject(new Error('Video is empty'))
+      }
+
+      const videos = files.video as File[]
+      videos.forEach((video) => {
+        //lấy ra cái tên cũ và lấy ra đuôi file (mp4, avi, ...)
+        const ext = getExtension(video.originalFilename as string)
+        //dùng tên mới + đuôi của tên cũ để thành tên mới đầy đủ
+        fs.renameSync(video.filepath, `${video.filepath}.${ext}`)
+        video.newFilename = `${video.newFilename}.${ext}`
+      })
+      return resolve(files.video as File[])
     })
   })
 }
